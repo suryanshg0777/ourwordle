@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Our Little Wordle ♡</title>
+<style>
+  :root {
+    --bg: #fff8f7;
+    --paper: #fffdfc;
+    --ink: #43333a;
+    --muted: #8a747d;
+    --pink: #d96d91;
+    --pink-dark: #b94f75;
+    --green: #6b9f82;
+    --yellow: #d5b45f;
+    --grey: #9b9297;
+    --line: #e8d9de;
+    --tile: #fffdfc;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; color: var(--ink);
+    background: radial-gradient(circle at top, #ffe8ef 0, var(--bg) 48%, #fffaf3 100%);
+    font-family: ui-rounded, "Trebuchet MS", system-ui, sans-serif;
+  }
+  main { width: min(100% - 28px, 680px); margin: 0 auto; padding: 30px 0 48px; }
+  .card {
+    background: rgba(255,253,252,.94); border: 1px solid #f0dce3;
+    border-radius: 24px; padding: clamp(18px, 4vw, 30px);
+    box-shadow: 0 12px 34px rgba(157, 91, 115, .10);
+  }
+  .topline { text-align:center; color: var(--pink-dark); font-size:.78rem; letter-spacing:.16em; text-transform:uppercase; font-weight:800; }
+  h1 { text-align:center; font-family: Georgia, serif; font-weight:600; font-size:clamp(2rem, 7vw, 3.1rem); margin: 8px 0 8px; }
+  .intro { text-align:center; color:var(--muted); line-height:1.6; max-width:490px; margin:0 auto 22px; }
+  .roundline { text-align:center; color:var(--pink-dark); font-weight:800; margin: 6px 0 4px; }
+  .hint { text-align:center; color:var(--muted); font-size:.94rem; min-height:1.5em; margin: 0 0 16px; }
+  .board { display:grid; gap:6px; width:min(100%, 390px); margin:0 auto 18px; }
+  .row { display:grid; gap:6px; grid-template-columns:repeat(var(--letters, 5), minmax(0, 1fr)); }
+  .tile {
+    aspect-ratio:1; border:2px solid var(--line); border-radius:8px; display:flex;
+    justify-content:center; align-items:center; font-size:clamp(.8rem, 3.7vw, 1.45rem);
+    font-weight:900; text-transform:uppercase; background:var(--tile); min-width:0;
+  }
+  .tile.filled { border-color:#c7a9b5; }
+  .tile.correct { background:var(--green); color:white; border-color:var(--green); }
+  .tile.present { background:var(--yellow); color:white; border-color:var(--yellow); }
+  .tile.absent { background:var(--grey); color:white; border-color:var(--grey); }
+  .keyboard { display:grid; gap:7px; margin: 0 auto; width:min(100%, 500px); }
+  .keyrow { display:flex; justify-content:center; gap:4px; }
+  .key {
+    border:0; border-radius:7px; min-width:0; flex:1; height:46px; padding:0 3px;
+    background:#f0e3e8; color:var(--ink); font-weight:800; font-size:clamp(.72rem, 2.8vw, 1rem);
+    cursor:pointer; touch-action:manipulation;
+  }
+  .key.wide { flex:1.55; font-size:.74rem; }
+  .key.correct { background:var(--green); color:white; }
+  .key.present { background:var(--yellow); color:white; }
+  .key.absent { background:var(--grey); color:white; }
+  .actions { display:flex; justify-content:center; gap:10px; margin-top:18px; flex-wrap:wrap; }
+  button.action {
+    border:0; border-radius:999px; padding:12px 20px; font-weight:800; cursor:pointer;
+    background:var(--pink); color:white;
+  }
+  button.action.secondary { background:#f3e6eb; color:var(--pink-dark); }
+  .message { text-align:center; min-height:1.6em; margin:13px 0 0; color:var(--pink-dark); font-weight:700; }
+  .letter { display:none; line-height:1.8; font-size:1.05rem; }
+  .letter h2 { text-align:center; font-family:Georgia,serif; font-size:2.3rem; color:var(--pink-dark); }
+  .letter p { white-space:normal; }
+  .signature { margin-top:24px; font-family:Georgia,serif; font-style:italic; font-size:1.25rem; }
+  .small { text-align:center; color:var(--muted); font-size:.8rem; margin-top:22px; }
+  .hidden { display:none !important; }
+  @media (max-width:390px) { .key { height:42px; } .card { padding:16px 12px; } }
+</style>
+</head>
+<body>
+<main>
+  <section class="card" id="gameScreen">
+    <div class="topline">A tiny game, made just for you</div>
+    <h1>Our Little Wordle ♡</h1>
+    <p class="intro">You know how we play Wordle together all the time? I made you three rounds of our own. These words are a little longer than usual, so you get extra guesses. No Googling, baby. I’ll know. Probably.</p>
+    <div class="roundline" id="roundTitle">Round 1 of 3</div>
+    <p class="hint" id="roundHint">Guess the 8-letter word.</p>
+    <div class="board" id="board" aria-label="Wordle board"></div>
+    <div class="keyboard" id="keyboard" aria-label="On-screen keyboard"></div>
+    <p class="message" id="message" aria-live="polite"></p>
+    <div class="actions">
+      <button class="action secondary" id="resetBtn" type="button">Restart round</button>
+      <button class="action hidden" id="nextBtn" type="button">Next round ♡</button>
+    </div>
+    <p class="small">Made with love, and a suspicious amount of effort.</p>
+  </section>
+
+  <section class="card letter" id="letterScreen">
+    <div class="topline">Your little birthday surprise</div>
+    <h2>Hi, baby ♡</h2>
+    <p>Happy birthday ❤️ I know this is a little late, sorry. I really wanted to make you something, and I hope this makes you smile.</p>
+    <p>I love you so much. You’re genuinely my favourite person in the world, and I hope we get to stay like this for a long, long time. You mean the world to me, and I’m really lucky to have you.</p>
+    <p>Wish I could be there to give you a hug today. Until then, just know I’m thinking of you and sending you the biggest one from here. Happy birthday, baby. ♡</p>
+    <p class="signature">Your S ♡</p>
+    <div class="actions"><button class="action secondary" id="playAgainBtn" type="button">Play again</button></div>
+  </section>
+</main>
+<script>
+(() => {
+  // These are the three secret answers. Change them here if you ever need to.
+  const rounds = [
+    { answer: "LIPGLOSS", tries: 9 },
+    { answer: "VIDEOGAME", tries: 10 },
+    { answer: "INSTAGRAM", tries: 10 }
+  ];
+  const keys = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"];
+  let roundIndex = 0, guesses = [], current = "", finished = false, roundWon = false;
+  let keyboardStates = {};
+
+  const boardEl = document.getElementById("board");
+  const keyboardEl = document.getElementById("keyboard");
+  const titleEl = document.getElementById("roundTitle");
+  const hintEl = document.getElementById("roundHint");
+  const messageEl = document.getElementById("message");
+  const nextBtn = document.getElementById("nextBtn");
+  const gameScreen = document.getElementById("gameScreen");
+  const letterScreen = document.getElementById("letterScreen");
+
+  function answer() { return rounds[roundIndex].answer; }
+  function maxTries() { return rounds[roundIndex].tries; }
+  function feedback(guess, target) {
+    const result = Array(guess.length).fill("absent");
+    const remaining = target.split("");
+    for (let i = 0; i < guess.length; i++) {
+      if (guess[i] === target[i]) { result[i] = "correct"; remaining[i] = null; }
+    }
+    for (let i = 0; i < guess.length; i++) {
+      if (result[i] === "correct") continue;
+      const idx = remaining.indexOf(guess[i]);
+      if (idx !== -1) { result[i] = "present"; remaining[idx] = null; }
+    }
+    return result;
+  }
+  function renderBoard() {
+    boardEl.style.setProperty("--letters", answer().length);
+    boardEl.innerHTML = "";
+    for (let r = 0; r < maxTries(); r++) {
+      const row = document.createElement("div");
+      row.className = "row";
+      row.style.setProperty("--letters", answer().length);
+      const submitted = guesses[r];
+      const marks = submitted ? feedback(submitted, answer()) : [];
+      for (let c = 0; c < answer().length; c++) {
+        const tile = document.createElement("div");
+        tile.className = "tile";
+        const letter = submitted ? submitted[c] : (r === guesses.length ? current[c] || "" : "");
+        if (letter) tile.classList.add("filled");
+        if (submitted) tile.classList.add(marks[c]);
+        tile.textContent = letter || "";
+        row.appendChild(tile);
+      }
+      boardEl.appendChild(row);
+    }
+  }
+  function renderKeyboard() {
+    keyboardEl.innerHTML = "";
+    keys.forEach((letters, rowIndex) => {
+      const row = document.createElement("div");
+      row.className = "keyrow";
+      if (rowIndex === 2) {
+        row.appendChild(makeKey("ENTER", "wide", submit));
+      }
+      for (const letter of letters) row.appendChild(makeKey(letter, "", () => addLetter(letter)));
+      if (rowIndex === 2) row.appendChild(makeKey("⌫", "wide", backspace));
+      keyboardEl.appendChild(row);
+    });
+    Object.entries(keyboardStates).forEach(([letter, state]) => {
+      const btn = [...keyboardEl.querySelectorAll(".key")].find(b => b.dataset.key === letter);
+      if (btn) btn.classList.add(state);
+    });
+  }
+  function makeKey(label, extraClass, action) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "key " + extraClass; b.textContent = label; b.dataset.key = label;
+    b.addEventListener("click", action);
+    return b;
+  }
+  function update() {
+    titleEl.textContent = `Round ${roundIndex + 1} of ${rounds.length}`;
+    hintEl.textContent = `Guess the ${answer().length}-letter word · ${maxTries()} tries`;
+    renderBoard(); renderKeyboard();
+  }
+  function addLetter(letter) {
+    if (finished || roundWon || current.length >= answer().length) return;
+    current += letter; messageEl.textContent = ""; renderBoard();
+  }
+  function backspace() {
+    if (finished || roundWon) return;
+    current = current.slice(0, -1); renderBoard();
+  }
+  function submit() {
+    if (finished || roundWon) return;
+    if (current.length !== answer().length) {
+      messageEl.textContent = `Your guess needs ${answer().length} letters.`; return;
+    }
+    const guess = current;
+    guesses.push(guess); current = "";
+    const marks = feedback(guess, answer());
+    marks.forEach((mark, i) => {
+      const letter = guess[i];
+      const old = keyboardStates[letter];
+      if (mark === "correct" || (mark === "present" && old !== "correct") || (!old && mark === "absent")) {
+        keyboardStates[letter] = mark;
+      }
+    });
+    renderBoard(); renderKeyboard();
+    if (guess === answer()) {
+      roundWon = true;
+      messageEl.textContent = ["You got it! I knew you could. ♡", "Two down! Look at you, genius.", "You solved all three! Your final surprise is ready. ♡"][roundIndex];
+      if (roundIndex === rounds.length - 1) {
+        nextBtn.textContent = "Read your letter ♡";
+        nextBtn.classList.remove("hidden");
+      } else {
+        nextBtn.textContent = "Next round ♡";
+        nextBtn.classList.remove("hidden");
+      }
+    } else if (guesses.length >= maxTries()) {
+      finished = true;
+      messageEl.textContent = `Out of tries! The word was ${answer()}. Try again, baby.`;
+      nextBtn.textContent = "Try this round again";
+      nextBtn.classList.remove("hidden");
+    } else {
+      messageEl.textContent = "Not quite. Keep going, baby ♡";
+    }
+  }
+  function resetRound() {
+    // Fully reset all round state before drawing the next board and keyboard.
+    guesses = [];
+    current = "";
+    finished = false;
+    roundWon = false;
+    keyboardStates = {};
+    nextBtn.classList.add("hidden");
+    nextBtn.textContent = "Next round ♡";
+    messageEl.textContent = "";
+    update();
+  }
+  function nextRound() {
+    // If she runs out of guesses, the same button restarts that round.
+    if (finished && !roundWon) {
+      resetRound();
+      return;
+    }
+    if (!roundWon) return;
+    if (roundIndex < rounds.length - 1) {
+      roundIndex += 1;
+      resetRound();
+      return;
+    }
+    gameScreen.classList.add("hidden");
+    letterScreen.style.display = "block";
+    window.scrollTo({top: 0, behavior: "smooth"});
+  }
+  document.getElementById("resetBtn").addEventListener("click", resetRound);
+  nextBtn.addEventListener("click", nextRound);
+  document.getElementById("playAgainBtn").addEventListener("click", () => {
+    roundIndex = 0; resetRound(); letterScreen.style.display = "none"; gameScreen.classList.remove("hidden");
+  });
+  document.addEventListener("keydown", e => {
+    if (gameScreen.classList.contains("hidden")) return;
+    if (/^[a-zA-Z]$/.test(e.key)) addLetter(e.key.toUpperCase());
+    else if (e.key === "Backspace") backspace();
+    else if (e.key === "Enter") submit();
+  });
+  update();
+})();
+</script>
+</body>
+</html>
